@@ -1,6 +1,6 @@
 #!/usr/bin/php -q
 <?php
-require_once("./PHPExcel/Classes/PHPExcel.php");
+require_once("../PHPExcel/Classes/PHPExcel.php");
 require './autoload.php';
 error_reporting(E_ALL);
 ini_set("display_errors",true);
@@ -155,6 +155,9 @@ $ws = new SoapClient("http://brickset.com/api/v2.asmx?WSDL");
 $resObj = $ws->getRecentlyUpdatedSets(array('apiKey'=>BRICKSET_API_KEY,'minutesAgo'=>1440));
 #$resObj = $ws->getRecentlyUpdatedSets(array('apiKey'=>BRICKSET_API_KEY,'minutesAgo'=>2880));
 $filename = "./UpdatedBrickset.xlsx";
+
+$currentDate = new DateTime();
+
 if(property_exists($resObj,'getRecentlyUpdatedSetsResult'))
 {
 	if(property_exists($resObj->getRecentlyUpdatedSetsResult,'sets'))
@@ -171,3 +174,18 @@ if(property_exists($resObj,'getRecentlyUpdatedSetsResult'))
 }
 unset($resObj);
 unset($ws);
+$MyGoogleDrive = new MyGoogleDrive();
+$FolderArray = $MyGoogleDrive->FindFolderID("title='BricksetSync' and mimeType = 'application/vnd.google-apps.folder'");
+if(count($FolderArray) == 1)
+{
+	$parentId = $FolderArray[0]->id;
+	$mimeType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+	$title = 'BricksetRecentlyUpdate-'.$currentDate->format('Y-m-d').'.xlsx';
+	$description = 'Brickset Recently Updated Sets Result List';
+	$MyGoogleDrive->insertFile($title, $description, $parentId, $mimeType, $filename);
+	error_log('['.date('Y-m-d H:i:s').'] '.__METHOD__.' upload '. $title . '.xlsx'."\n",3,'./log/log.txt');
+	
+}
+unset($FolderArray);
+unset($MyGoogleDrive);
+unset($currentDate);
