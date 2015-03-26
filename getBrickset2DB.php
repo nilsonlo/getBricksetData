@@ -16,7 +16,8 @@ define('BRICKSET_API_KEY',$ini_array['BRICKSET']['APIKEY']);
 $url = "http://brickset.com/api/v2.asmx";
 $ws = new SoapClient("http://brickset.com/api/v2.asmx?WSDL",array('soap_version'=>SOAP_1_2,'trace'=>1));
 #var_dump($ws->checkKey(array('apiKey'=>$Brickset_apiKey)));
-$itemArray = $ItemInfoDB->getItemID();
+#$itemArray = $ItemInfoDB->getItemID();
+$itemArray = $ItemInfoDB->confirmItemID();
 foreach($itemArray as $item)
 {
 	if($item->sub_name == '') continue;
@@ -59,9 +60,9 @@ foreach($itemArray as $item)
 					$resObj->sets->packagingType:null,
 			);
 		if(!$ItemInfoDB->updateItemPrice($updateItem))
-			echo "Failed\n";
+			echo "Updated Failed\n";
 		else
-			echo "Success\n";
+			echo "Updated Success\n";
 		unset($updateItem);
 	}
 	else

@@ -7,8 +7,12 @@ ini_set("display_errors",true);
 ini_set("html_errors",false);
 date_default_timezone_set("Asia/Taipei");
 
+$dbh = new PDO($DB['DSN'],$DB['DB_USER'], $DB['DB_PWD'],
+	array( PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES utf8",
+	PDO::ATTR_PERSISTENT => false));
+$ItemInfoDB = new ItemInfo($dbh);
 
-function GenerateExcel($resData,$filename,$useTemplate=false)
+function GenerateExcel($itemInfoDB,$resData,$filename,$useTemplate=false)
 {
 	try {
 		// Load Files
@@ -19,7 +23,7 @@ function GenerateExcel($resData,$filename,$useTemplate=false)
 
 		$objPHPExcel->setActiveSheetIndex(0);
 
-		GetRawDataFromBrickset($resData,$objPHPExcel);
+		GetRawDataFromBrickset($itemInfoDB,$resData,$objPHPExcel);
 		// Save File
 		$objWriter = PHPExcel_IOFactory::createWriter($objPHPExcel,'Excel2007');
 		$objWriter->save($filename);
@@ -30,9 +34,17 @@ function GenerateExcel($resData,$filename,$useTemplate=false)
 	return ;
 }
 
-function GetRawDataFromBrickset($resData,&$objPHPExcel)
+function GetRawDataFromBrickset($itemInfoDB,$resData,&$objPHPExcel)
 {
 	$rows = 2;
+	$updateItem = array(
+		'legoID'=>'',
+		'uk_price'=>null,
+		'us_price'=>null,
+		'ca_price'=>null,
+		'eu_price'=>null,
+		'packaging_type'=>null
+		);
 	foreach($resData as $item)
 	{
 		property_exists($item,'setID')?
@@ -41,6 +53,7 @@ function GetRawDataFromBrickset($resData,&$objPHPExcel)
 		property_exists($item,'number')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("B$rows",$item->number,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
+		property_exists($item,'number')? $updateItem['legoID']=$item->number:$updateItem['legoID']='';
 		property_exists($item,'numberVariant')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("C$rows",$item->numberVariant,
 				PHPExcel_Cell_DataType::TYPE_NUMERIC):0;
@@ -104,15 +117,19 @@ function GetRawDataFromBrickset($resData,&$objPHPExcel)
 		property_exists($item,'UKRetailPrice')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("W$rows",$item->UKRetailPrice,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
+		property_exists($item,'UKRetailPrice')? $updateItem['uk_price']=$item->UKRetailPrice : $updateItem['uk_price']=null;
 		property_exists($item,'USRetailPrice')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("X$rows",$item->USRetailPrice,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
+		property_exists($item,'USRetailPrice')? $updateItem['us_price']=$item->USRetailPrice : $updateItem['us_price']=null;
 		property_exists($item,'CARetailPrice')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("Y$rows",$item->CARetailPrice,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
+		property_exists($item,'CARetailPrice')? $updateItem['ca_price']=$item->CARetailPrice : $updateItem['ca_price']=null;
 		property_exists($item,'EURetailPrice')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("Z$rows",$item->EURetailPrice,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
+		property_exists($item,'EURetailPrice')? $updateItem['eu_price']=$item->EURetailPrice : $updateItem['eu_price']=null;
 		property_exists($item,'rating')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("AA$rows",$item->rating,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
@@ -122,6 +139,7 @@ function GetRawDataFromBrickset($resData,&$objPHPExcel)
 		property_exists($item,'packagingType')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("AC$rows",$item->packagingType,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
+		property_exists($item,'packagingType')? $updateItem['packaging_type']=$item->packagingType : $updateItem['packaging_type']=null;
 		property_exists($item,'availability')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("AD$rows",$item->availability,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
@@ -143,6 +161,11 @@ function GetRawDataFromBrickset($resData,&$objPHPExcel)
 		property_exists($item,'lastUpdated')?
 		$objPHPExcel->getActiveSheet()->setCellValueExplicit("AJ$rows",$item->lastUpdated,
 				PHPExcel_Cell_DataType::TYPE_STRING):'';
+		if($itemInfoDB->updateItemPrice2($updateItem))
+		{
+			error_log('['.date('Y-m-d H:i:s').'] '.__METHOD__.' update '. $updateItem['legoID'] . ' Success'."\n",3,'./log/log.txt');
+			error_log('['.date('Y-m-d H:i:s').'] '.__METHOD__.' update '. $updateItem['legoID'] . ' Success'."\n");
+		}
 		$rows++;
 	}
 }
@@ -164,11 +187,11 @@ if(property_exists($resObj,'getRecentlyUpdatedSetsResult'))
 	{
 		if(!is_array($resObj->getRecentlyUpdatedSetsResult->sets))
 		{
-			GenerateExcel(array(0=>$resObj->getRecentlyUpdatedSetsResult->sets),$filename,true);
+			GenerateExcel($ItemInfoDB,array(0=>$resObj->getRecentlyUpdatedSetsResult->sets),$filename,true);
 		}
 		else
 		{
-			GenerateExcel($resObj->getRecentlyUpdatedSetsResult->sets,$filename,true);
+			GenerateExcel($ItemInfoDB,$resObj->getRecentlyUpdatedSetsResult->sets,$filename,true);
 		}
 	}
 }
