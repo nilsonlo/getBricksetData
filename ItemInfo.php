@@ -20,7 +20,7 @@ class ItemInfo {
 			(UKRetailPrice is null or USRetailPrice is null or CARetailPrice is null or EURetailPrice is null)
 			 order by year desc");
 		$this->p5 = $this->dbh->prepare("update item_info set UKRetailPrice=:uk_price,USRetailPrice=:us_price,
-			CARetailPrice=:ca_price,EURetailPrice=:eu_price,packagingType=:package_type where legoID=:legoID");
+			CARetailPrice=:ca_price,EURetailPrice=:eu_price,packagingType=:packaging_type where legoID=:legoID");
 		
 	}
 
@@ -75,6 +75,8 @@ class ItemInfo {
 	function updateItemPrice2($update_data)
 	{
 		try {
+			if($update_data['legoID'] == '') return false;
+#			var_dump($update_data);
 			$this->p5->execute($update_data);
 			if($this->p5->rowCount() === 1)
 				return true;
